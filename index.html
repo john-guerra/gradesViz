@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Grades Viz</title>
+  <style>
+    body {
+      font-family: sans-serif;
+    }  
+    circle {
+      fill: steelblue;
+      opacity: 0.7;
+    }
+    .axis--x {
+      font-size: 12pt;      
+    }
+    .axis--x text {
+      fill: black;
+    }
+    .axis--x .axis_legend {
+      font-size: 14pt;
+      text-anchor: start;
+    }
+    .tooltip {
+      text-anchor: middle;
+    }
+    .tick {
+      stroke-dasharray: 1,7;
+    }
+    p {
+      font-size: 14pt;
+    }
+
+  </style>
+  <script src="https://d3js.org/d3.v4.js"></script>
+</head>
+<body>
+  <h1>Notas primer parcial</h1>
+  <h2>APO1 Sección 11</h2>
+  <button id="btnShuffle">shuffle</button>
+  <div id="chart"></div>
+  <br>
+  <p>Mira como te fue, entra tu código <input type="text" id="inputCode"> <button id="btnSearch">Buscar</button></p>
+  <p id="res"></p>
+
+  <script>
+
+  var width = window.innerWidth
+    || document.documentElement.clientWidth
+    || document.body.clientWidth;
+  width -= 100;
+
+  var height = 150;
+
+  // height = height - 150;
+
+  var svg = d3.select("#chart")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height),
+    margin = {top: 20, right: 60, bottom: 40, left: 20},
+    width = width- margin.left - margin.right,
+    height = height - margin.top - margin.bottom;
+
+  svg.append("g")
+    .attr("class", "axis--x")
+    .attr("transform", "translate(0," + height + ")")
+      .append("text")
+      .attr("class", "axis_legend")
+      .text("Nota")
+      .attr("transform", "translate(0, " + (margin.bottom+ 10 ) + ") ");
+
+
+
+  var g = svg.append("g")
+    .attr("class", "points")
+    .attr("transform", "translate(" +  margin.left + " ," + margin.top + ")");
+  var x = d3.scaleLinear()
+    .domain([0, 5.5])
+    .range([0, width]);
+  var y = function (d) {
+    return 10 + Math.random()*20;
+  };
+
+  function update(data) {
+    var points = g.selectAll("circle")
+    .data(data, function (d) { return d.code; });
+
+  var pointsEnter = points.enter()
+    .append("circle")
+    .attr("cx", 0)
+    .attr("r", 5);
+
+  points.merge(pointsEnter)
+    .attr("id", function (d) { return "circle" + d.code; })    
+    .transition()
+    .duration(1000)
+    .attr("cx", function (d) { return x(d.grade); })
+    .attr("cy", function (d) {
+      return y(d.grade);
+    });
+
+  points.exit()
+    .remove();
+
+  d3.select(".axis--x")
+    .call(d3.axisBottom(x)
+      .tickSizeInner(-height)
+      // .tickSizeOuter(10)
+      .tickPadding(15)
+    );
+  }
+
+  d3.csv('apo1_n1_exam.csv', function (data) {
+    data.forEach(function (d) {
+      d.grade = +d.grade;
+    });
+
+    update(data);
+
+
+    d3.select("#btnSearch")
+      .on("click", onSearch);
+
+    d3.select("#inputCode")
+      .on("enter", onSearch);
+
+    d3.select("#btnShuffle")
+      .on("click", function () { update(data); })
+
+    function selectGrade(d) {
+      d3.selectAll("circle")
+        .transition()
+        .duration(500)
+        .attr("r", 5)
+        .style("opacity", 0.7)
+        .style("fill", "steelblue");
+      d3.selectAll(".tooltip").remove();
+
+
+      d3.select("#circle"+d.code)
+        .transition()
+        .duration(2000)
+        .attr("r", 10)
+        .style("opacity", 1.0)
+        .style("fill", "darkred");
+
+      //tooltip
+      var text = "Nota: " + d.grade +  " código: " + d.code + "\n";
+      g
+        .append("text")
+        .attr("class", "tooltip")
+        .attr("x",  x(d.grade))
+        .attr("y",  0)
+        .text(text);
+
+      d3.select("#res")
+        .text(text);
+    }
+
+    function onSearch(evt) {
+      var code = d3.select("#inputCode").property("value").trim();
+
+      var res =data.filter(function (d) { return d.code===code; });
+
+      if (res.length<1) {
+        alert("Código no encontrado, intenta de nuevo!");
+        return;
+      }
+
+      selectGrade(res[0]);
+    }      
+  });
+
+  
+
+  </script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-72531610-1', 'auto');
+  ga('send', 'pageview');
+
+  </script>
+</body>
+</html>
