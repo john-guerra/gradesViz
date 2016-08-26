@@ -31,6 +31,12 @@
       font-size: 14pt;
     }
 
+    .mean {
+      stroke: darkblue;
+      stroke-width: 1.5;
+      stroke-dasharray: 5,7;
+    }
+
   </style>
   <script src="https://d3js.org/d3.v4.js"></script>
 </head>
@@ -78,42 +84,68 @@
   var x = d3.scaleLinear()
     .domain([0, 5.5])
     .range([0, width]);
+  var yRange = [10,50];
   var y = function (d) {
-    return 10 + Math.random()*20;
+    return yRange[0] + Math.random()*yRange[1];
   };
 
+  // UPDATE
   function update(data) {
+    var mean = g
+      .selectAll(".mean")
+      .data([data.mean]);
+
+    var meanEnter = mean.enter()
+      .append("line")
+      .attr("class", "mean");
+
+    mean.merge(meanEnter)
+      .attr("x1", function (d) { return x(d);})
+      .attr("x2", function (d) { return x(d);})
+      .attr("y1", yRange[0])
+      .attr("y2", yRange[1]);
+
+    mean.exit().remove();
+
     var points = g.selectAll("circle")
-    .data(data, function (d) { return d.code; });
+     .data(data, function (d) { return d.code; });
 
-  var pointsEnter = points.enter()
-    .append("circle")
-    .attr("cx", 0)
-    .attr("r", 5);
+    var pointsEnter = points.enter()
+      .append("circle")
+      .attr("cx", 0)
+      .attr("r", 5);
 
-  points.merge(pointsEnter)
-    .attr("id", function (d) { return "circle" + d.code; })    
-    .transition()
-    .duration(1000)
-    .attr("cx", function (d) { return x(d.grade); })
-    .attr("cy", function (d) {
-      return y(d.grade);
-    });
+    points.merge(pointsEnter)
+      .attr("id", function (d) { return "circle" + d.code; })    
+      .transition()
+      .duration(1000)
+      .attr("cx", function (d) { return x(d.grade); })
+      .attr("cy", function (d) {
+        return y(d.grade);
+      });
 
-  points.exit()
-    .remove();
+    points.exit()
+      .remove();
 
-  d3.select(".axis--x")
-    .call(d3.axisBottom(x)
-      .tickSizeInner(-height)
-      // .tickSizeOuter(10)
-      .tickPadding(15)
-    );
+    d3.select(".axis--x")
+      .call(d3.axisBottom(x)
+        .tickSizeInner(-height)
+        // .tickSizeOuter(10)
+        .tickPadding(15)
+      );
+
+    //mean
+
+
+
+
   }
 
   d3.csv('apo1_n1_exam.csv', function (data) {
+    data.mean = 0;
     data.forEach(function (d) {
       d.grade = +d.grade;
+      data.mean += d.grade / data.length;
     });
 
     update(data);
@@ -123,10 +155,13 @@
       .on("click", onSearch);
 
     d3.select("#inputCode")
-      .on("enter", onSearch);
+      .on("change", onSearch);
 
     d3.select("#btnShuffle")
       .on("click", function () { update(data); })
+
+
+
 
     function selectGrade(d) {
       d3.selectAll("circle")
