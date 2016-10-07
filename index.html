@@ -6,13 +6,13 @@
   <style>
     body {
       font-family: sans-serif;
-    }  
+    }
     circle {
       fill: steelblue;
       opacity: 0.7;
     }
     .axis--x {
-      font-size: 12pt;      
+      font-size: 12pt;
     }
     .axis--x text {
       fill: black;
@@ -41,8 +41,8 @@
   <script src="https://d3js.org/d3.v4.js"></script>
 </head>
 <body>
-  <h1>Notas primer parcial</h1>
-  <h2>APO1 Sección 11</h2>
+  <h1>Notas parcial</h1>
+  <h2>Visual Analytics</h2>
   <button id="btnShuffle">shuffle</button>
   <div id="chart"></div>
   <br>
@@ -64,25 +64,25 @@
     .append("svg")
     .attr("width", width)
     .attr("height", height),
-    margin = {top: 20, right: 60, bottom: 40, left: 20},
+    margin = {top: 20, right: 60, bottom: 60, left: 20},
     width = width- margin.left - margin.right,
     height = height - margin.top - margin.bottom;
-
-  svg.append("g")
-    .attr("class", "axis--x")
-    .attr("transform", "translate(0," + height + ")")
-      .append("text")
-      .attr("class", "axis_legend")
-      .text("Nota")
-      .attr("transform", "translate(0, " + (margin.bottom+ 10 ) + ") ");
-
 
 
   var g = svg.append("g")
     .attr("class", "points")
     .attr("transform", "translate(" +  margin.left + " ," + margin.top + ")");
+
+  g.append("g")
+    .attr("class", "axis--x")
+    .attr("transform", "translate(0," + height + ")")
+      .append("text")
+      .attr("class", "axis_legend")
+      .text("Nota")
+      .attr("transform", "translate(0, " + (margin.bottom - 20 ) + ") ");
+
   var x = d3.scaleLinear()
-    .domain([0, 5.5])
+    .domain([0, 5])
     .range([0, width]);
   var yRange = [10,50];
   var y = function (d) {
@@ -116,7 +116,7 @@
       .attr("r", 5);
 
     points.merge(pointsEnter)
-      .attr("id", function (d) { return "circle" + d.code; })    
+      .attr("id", function (d) { return "circle" + d.code; })
       .transition()
       .duration(1000)
       .attr("cx", function (d) { return x(d.grade); })
@@ -141,7 +141,7 @@
 
   }
 
-  d3.csv('apo1_n1_exam.csv', function (data) {
+  d3.csv('grades.csv', function (data) {
     data.mean = 0;
     data.forEach(function (d) {
       d.grade = +d.grade;
@@ -204,10 +204,10 @@
       }
 
       selectGrade(res[0]);
-    }      
+    }
   });
 
-  
+
 
   </script>
   <script>
