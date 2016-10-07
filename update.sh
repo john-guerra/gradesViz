@@ -1,1 +1,1 @@
-rsync -avh -e "ssh -i /Users/profesor/Dropbox/dutoVizNew.pem" *.html *.js *.csv  ubuntu@dutovis.com:/var/www/gradesViz/
+rsync -avh -e "ssh -i /Users/aguerra/Dropbox/dutoVizNew.pem" *.html *.js *.csv  ubuntu@dutovis.com:/var/www/gradesViz/
