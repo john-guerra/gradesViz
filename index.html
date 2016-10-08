@@ -36,6 +36,11 @@
       stroke-width: 1.5;
       stroke-dasharray: 5,7;
     }
+    .subGraph rect {
+      fill:#eee;
+      stroke-width: 1;
+      stroke: black;
+    }
 
   </style>
   <script src="https://d3js.org/d3.v4.js"></script>
@@ -56,7 +61,9 @@
     || document.body.clientWidth;
   width -= 100;
 
-  var height = 150;
+  var height = 900;
+
+
 
   // height = height - 150;
 
@@ -80,52 +87,128 @@
       .attr("class", "axis_legend")
       .text("Nota")
       .attr("transform", "translate(0, " + (margin.bottom - 20 ) + ") ");
+  
+  g.append("g")
+    .attr("class", "axis--y")
+    .attr("transform", "translate(" + width + ",0)")
+      .append("text")
+      .attr("class", "axis_legend")
+      .text("Porcentage")
+      .attr("transform", "translate(0, 0) rotate(-90)");
 
-  var x = d3.scaleLinear()
-    .domain([0, 5])
-    .range([0, width]);
-  var yRange = [10,50];
-  var y = function (d) {
-    return yRange[0] + Math.random()*yRange[1];
-  };
 
-  // UPDATE
-  function update(data) {
-    var mean = g
-      .selectAll(".mean")
-      .data([data.mean]);
 
-    var meanEnter = mean.enter()
-      .append("line")
-      .attr("class", "mean");
+  var x = d3.scaleLinear().range([0, width]);
+  var ySubGraphs = d3.scaleLinear().range([0, height]);
 
-    mean.merge(meanEnter)
-      .attr("x1", function (d) { return x(d);})
-      .attr("x2", function (d) { return x(d);})
-      .attr("y1", yRange[0])
-      .attr("y2", yRange[1]);
 
-    mean.exit().remove();
+  var stack = d3.stack();
 
-    var points = g.selectAll("circle")
-     .data(data, function (d) { return d.code; });
+  function drawGradesChart(sel, data, gradeFn, graphHeight) {
+    var mean = 0;
+    data.forEach(function (d, i) {
+      mean += gradeFn(d, i) / data.length;
+    });
 
-    var pointsEnter = points.enter()
-      .append("circle")
-      .attr("cx", 0)
-      .attr("r", 5);
+    var yRange = [10, graphHeight-10];
 
-    points.merge(pointsEnter)
-      .attr("id", function (d) { return "circle" + d.code; })
-      .transition()
-      .duration(1000)
-      .attr("cx", function (d) { return x(d.grade); })
-      .attr("cy", function (d) {
-        return y(d.grade);
+    var y = function (d) {
+      return yRange[0] + Math.random()*(yRange[1]-yRange[0]);
+    };
+    updateGradesChart(data);
+
+
+      // UPDATE
+    function updateGradesChart(data) {
+      
+      var meanSel = sel
+        .selectAll(".mean")
+        .data([mean]);
+
+      var meanEnter = meanSel.enter()
+        .append("line")
+        .attr("class", "mean");
+
+      meanSel.merge(meanEnter)
+        .attr("x1", function (d) { return x(d);})
+        .attr("x2", function (d) { return x(d);})
+        .attr("y1", yRange[0])
+        .attr("y2", yRange[1]);
+
+      meanSel.exit().remove();
+
+      var points = sel.selectAll("circle")
+       .data(data, function (d) { return d.code; });
+
+      var pointsEnter = points.enter()
+        .append("circle")
+        .attr("cx", 0)
+        .attr("r", 5);
+
+      points.merge(pointsEnter)
+        .attr("id", function (d) { return "circle" + d.code; })
+        .transition()
+        .duration(1000)
+        .attr("cx", function (d,i) { return x(gradeFn(d, i)); })
+        .attr("cy", function (d,i) { return y(gradeFn(d, i)); });
+
+      points.exit()
+        .remove();
+
+
+      //mean
+    }
+  }
+
+ 
+
+  function ready(err, data, pcts) {
+    if (err) throw err;
+
+    // Preprocessing
+    d3.keys(pcts[0]).forEach(function (point) {
+      pcts[0][point] = +pcts[0][point];
+    });
+    data.forEach(function (student) {
+      d3.keys(pcts[0]).forEach(
+        function (point) {
+          student[point] = +student[point];
+        }
+      )      
+    });
+
+    stack.keys(d3.keys(pcts[0]));
+
+    //compute the domain of the subgraphs, usually 100%
+    ySubGraphs.domain([0, d3.sum(d3.values(pcts[0]))]);
+
+    x.domain([0, 10]);
+
+    var subGraphs = g.selectAll(".subGraph")
+      .data(stack(pcts));
+
+    var subGraphHeight = function (d) { 
+        return ySubGraphs(d[0][1])-ySubGraphs(d[0][0]); };
+    var subGraphsEnter = subGraphs.enter()    
+      .append("g")
+      .attr("class", "subGraph")
+      .attr("transform", function (d) {
+        return "translate(" + 0 + "," + ySubGraphs(d[0][0]) + ")";
       });
 
-    points.exit()
-      .remove();
+    subGraphsEnter
+      .append("rect")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", width)
+      .attr("height", subGraphHeight )
+
+    subGraphsEnter
+      .each(function (point) {
+        drawGradesChart(d3.select(this), data, 
+          function (d) { return d[point.key]; },
+          subGraphHeight(point));
+      });
 
     d3.select(".axis--x")
       .call(d3.axisBottom(x)
@@ -134,21 +217,13 @@
         .tickPadding(15)
       );
 
-    //mean
+    d3.select(".axis--y")
+      .call(d3.axisRight(ySubGraphs)
+        // .tickSizeInner(-height)
+        // .tickSizeOuter(10)
+        .tickPadding(15)
+      );
 
-
-
-
-  }
-
-  d3.csv('grades.csv', function (data) {
-    data.mean = 0;
-    data.forEach(function (d) {
-      d.grade = +d.grade;
-      data.mean += d.grade / data.length;
-    });
-
-    update(data);
 
 
     d3.select("#btnSearch")
@@ -163,7 +238,7 @@
 
 
 
-    function selectGrade(d) {
+    function selectGrades(d) {
       d3.selectAll("circle")
         .transition()
         .duration(500)
@@ -173,7 +248,7 @@
       d3.selectAll(".tooltip").remove();
 
 
-      d3.select("#circle"+d.code)
+      d3.selectAll("#circle"+d.code)
         .transition()
         .duration(2000)
         .attr("r", 10)
@@ -203,10 +278,19 @@
         return;
       }
 
-      selectGrade(res[0]);
+      selectGrades(res[0]);
     }
-  });
 
+    
+
+    
+  };
+
+
+  var queue = d3.queue()
+    .defer(d3.csv, "grades.csv")
+    .defer(d3.csv, "pcts.csv")
+    .await(ready);
 
 
   </script>
