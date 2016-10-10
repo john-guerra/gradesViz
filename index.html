@@ -39,7 +39,7 @@
     .subGraph rect {
       fill:#eee;
       stroke-width: 1;
-      stroke: black;
+      stroke: rgb(197, 197, 197);
     }
 
   </style>
@@ -80,21 +80,18 @@
     .attr("class", "points")
     .attr("transform", "translate(" +  margin.left + " ," + margin.top + ")");
 
-  g.append("g")
-    .attr("class", "axis--x")
-    .attr("transform", "translate(0," + height + ")")
-      .append("text")
-      .attr("class", "axis_legend")
-      .text("Nota")
-      .attr("transform", "translate(0, " + (margin.bottom - 20 ) + ") ");
-  
-  g.append("g")
-    .attr("class", "axis--y")
-    .attr("transform", "translate(" + width + ",0)")
-      .append("text")
-      .attr("class", "axis_legend")
-      .text("Porcentage")
-      .attr("transform", "translate(0, 0) rotate(-90)");
+  var subGraphsG = g.append("g")
+    .attr("class", "subGraphs");
+
+
+
+  // g.append("g")
+  //   .attr("class", "axis--y")
+  //   .attr("transform", "translate(" + width + ",0)")
+  //     .append("text")
+  //     .attr("class", "axis_legend")
+  //     .text("Porcentage")
+  //     .attr("transform", "translate(0, 0) rotate(-90)");
 
 
 
@@ -117,10 +114,18 @@
     };
     updateGradesChart(data);
 
+    .append("g")
+    .attr("class", "axis--x")
+    .attr("transform", "translate(0," + height + ")")
+      .append("text")
+      .attr("class", "axis_legend")
+      .text("Nota")
+      .attr("transform", "translate(0, " + (margin.bottom - 20 ) + ") ");
+
 
       // UPDATE
     function updateGradesChart(data) {
-      
+
       var meanSel = sel
         .selectAll(".mean")
         .data([mean]);
@@ -160,7 +165,7 @@
     }
   }
 
- 
+
 
   function ready(err, data, pcts) {
     if (err) throw err;
@@ -174,7 +179,7 @@
         function (point) {
           student[point] = +student[point];
         }
-      )      
+      )
     });
 
     stack.keys(d3.keys(pcts[0]));
@@ -184,12 +189,22 @@
 
     x.domain([0, 10]);
 
-    var subGraphs = g.selectAll(".subGraph")
+    //Draw Axis
+    d3.select(".axis--x")
+      .call(d3.axisBottom(x)
+        .tickSizeInner(-height)
+        // .tickSizeOuter(10)
+        .tickPadding(15)
+      );
+
+
+    //Draw subgraphs
+    var subGraphs = subGraphsG.selectAll(".subGraph")
       .data(stack(pcts));
 
-    var subGraphHeight = function (d) { 
+    var subGraphHeight = function (d) {
         return ySubGraphs(d[0][1])-ySubGraphs(d[0][0]); };
-    var subGraphsEnter = subGraphs.enter()    
+    var subGraphsEnter = subGraphs.enter()
       .append("g")
       .attr("class", "subGraph")
       .attr("transform", function (d) {
@@ -205,24 +220,18 @@
 
     subGraphsEnter
       .each(function (point) {
-        drawGradesChart(d3.select(this), data, 
+        drawGradesChart(d3.select(this), data,
           function (d) { return d[point.key]; },
           subGraphHeight(point));
       });
 
-    d3.select(".axis--x")
-      .call(d3.axisBottom(x)
-        .tickSizeInner(-height)
-        // .tickSizeOuter(10)
-        .tickPadding(15)
-      );
 
-    d3.select(".axis--y")
-      .call(d3.axisRight(ySubGraphs)
-        // .tickSizeInner(-height)
-        // .tickSizeOuter(10)
-        .tickPadding(15)
-      );
+    // d3.select(".axis--y")
+    //   .call(d3.axisRight(ySubGraphs)
+    //     // .tickSizeInner(-height)
+    //     // .tickSizeOuter(10)
+    //     .tickPadding(15)
+    //   );
 
 
 
@@ -281,9 +290,9 @@
       selectGrades(res[0]);
     }
 
-    
 
-    
+
+
   };
 
 
