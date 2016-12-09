@@ -41,8 +41,8 @@
   <script src="https://d3js.org/d3.v4.js"></script>
 </head>
 <body>
-  <h1>Notas parcial</h1>
-  <h2>Visual Analytics</h2>
+  <h1>Notas <select id="selExam">Examen</select></h1>
+  <h2>APO1 SEC11</h2>
   <button id="btnShuffle">shuffle</button>
   <div id="chart"></div>
   <br>
@@ -57,6 +57,7 @@
   width -= 100;
 
   var height = 150;
+  var selected = null;
 
   // height = height - 150;
 
@@ -82,7 +83,7 @@
       .attr("transform", "translate(0, " + (margin.bottom - 20 ) + ") ");
 
   var x = d3.scaleLinear()
-    .domain([0, 5])
+    .domain([0, 5.5])
     .range([0, width]);
   var yRange = [10,50];
   var y = function (d) {
@@ -91,6 +92,15 @@
 
   // UPDATE
   function update(data) {
+    var sel = d3.select("#selExam").property("value");
+
+    data.mean = 0;
+    data.forEach(function (d) {
+      d.grade = d[sel];
+      data.mean += d.grade / data.length;
+
+    });
+
     var mean = g
       .selectAll(".mean")
       .data([data.mean]);
@@ -122,6 +132,10 @@
       .attr("cx", function (d) { return x(d.grade); })
       .attr("cy", function (d) {
         return y(d.grade);
+      })
+      .on("end", function (d) {
+        if (selected)
+          selectGrade(selected);
       });
 
     points.exit()
@@ -134,18 +148,64 @@
         .tickPadding(15)
       );
 
+    // if (selected) {
+    //   selectGrade(selected);
+    // }
+
     //mean
+  }
+
+  function selectGrade(d) {
+    d3.selectAll("circle")
+      .transition()
+      .duration(500)
+      .attr("r", 5)
+      .style("opacity", 0.7)
+      .style("fill", "steelblue");
+    d3.selectAll(".tooltip").remove();
 
 
+    d3.select("#circle"+d.code)
+      .transition()
+      .duration(2000)
+      .attr("r", 10)
+      .style("opacity", 1.0)
+      .style("fill", "darkred");
 
+    var sel = d3.select("#selExam").property("value");
+    //tooltip
+    var text = "Nota " +  sel + " : " + d.grade +  " código: " + d.code + "\n";
+    g
+      .append("text")
+      .attr("class", "tooltip")
+      .attr("x",  x(d.grade))
+      .attr("y",  0)
+      .text(text);
 
+    d3.select("#res")
+      .text(text);
+
+    selected = d;
   }
 
   d3.csv('grades.csv', function (data) {
     data.mean = 0;
+    var options = d3.keys(data[0]).filter(function (d) { return d!=="Código"});
+    d3.select("#selExam")
+      .on("change", function () { return update(data); })
+      .selectAll("option")
+        .data(options)
+        .enter()
+        .append("option")
+        .attr("value", function (d) { return d; })
+        .text(function (d) { return d; });
+
+
     data.forEach(function (d) {
-      d.grade = +d.grade;
-      data.mean += d.grade / data.length;
+      options.forEach(function (grade) {
+        d[grade] = +d[grade];
+        d.code = d["Código"];
+      })
     });
 
     update(data);
@@ -160,38 +220,6 @@
     d3.select("#btnShuffle")
       .on("click", function () { update(data); })
 
-
-
-
-    function selectGrade(d) {
-      d3.selectAll("circle")
-        .transition()
-        .duration(500)
-        .attr("r", 5)
-        .style("opacity", 0.7)
-        .style("fill", "steelblue");
-      d3.selectAll(".tooltip").remove();
-
-
-      d3.select("#circle"+d.code)
-        .transition()
-        .duration(2000)
-        .attr("r", 10)
-        .style("opacity", 1.0)
-        .style("fill", "darkred");
-
-      //tooltip
-      var text = "Nota: " + d.grade +  " código: " + d.code + "\n";
-      g
-        .append("text")
-        .attr("class", "tooltip")
-        .attr("x",  x(d.grade))
-        .attr("y",  0)
-        .text(text);
-
-      d3.select("#res")
-        .text(text);
-    }
 
     function onSearch(evt) {
       var code = d3.select("#inputCode").property("value").trim();
