@@ -8,17 +8,17 @@
       font-family: sans-serif;
     }
     circle {
-      fill: steelblue;
+      fill: #888;
       opacity: 0.7;
     }
-    .axis--x {
+/*    .axis--x {
       font-size: 12pt;
-    }
+    }*/
     .axis--x text {
       fill: black;
     }
     .axis--x .axis_legend {
-      font-size: 14pt;
+      font-size: 12pt;
       text-anchor: start;
     }
     .tooltip {
@@ -34,263 +34,341 @@
     .mean {
       stroke: darkblue;
       stroke-width: 1.5;
-      stroke-dasharray: 5,7;
+      stroke-dasharray: 1,0.5;
     }
     .subGraph rect {
-      fill:#eee;
+      fill:#fbfbfb;
       stroke-width: 1;
-      stroke: black;
+      stroke: #bbb;
+    }
+    .pointLegend {
+      font-size:9pt;
+    }
+
+    svg {
+      overflow: visible;
     }
 
   </style>
   <script src="https://d3js.org/d3.v4.js"></script>
+  <script src="randomGradesChart.js"></script>
 </head>
 <body>
-  <h1>Notas parcial</h1>
-  <h2>Visual Analytics</h2>
-  <button id="btnShuffle">shuffle</button>
+  <h1>Notas Desarrollo Web</h1>
+  <label for="selProj">Nota: <select id="selProj">
+      <option value="grades_webdev_201801_30pct.csv">Nota 40%</option>
+      <option value="grades_webdev_201801_project_1.csv">Proyecto 1</option>
+      <option value="grades_webdev_201801_project_2.csv">Proyecto 2</option>
+    </select>
+  </label>
+  <p>Mira cómo te fue, entra tu código <input type="text" id="inputCode"> <button id="btnSearch">Buscar</button></p>
+  <p id="res"></p>
+  <!-- <button id="btnShuffle">shuffle</button> -->
+  <h2>Nota</h2>
+  <div id="grade"></div>
+  <h2>Puntos individuales (0-10 cada uno)</h2>
   <div id="chart"></div>
   <br>
-  <p>Mira como te fue, entra tu código <input type="text" id="inputCode"> <button id="btnSearch">Buscar</button></p>
-  <p id="res"></p>
-
   <script>
+/* global d3, randomGradesChart */
 
-  var width = window.innerWidth
-    || document.documentElement.clientWidth
-    || document.body.clientWidth;
-  width -= 100;
+var width = window.innerWidth
+  || document.documentElement.clientWidth
+  || document.body.clientWidth;
+width -= 200;
 
-  var height = 900;
-
-
-
-  // height = height - 150;
-
-  var svg = d3.select("#chart")
-    .append("svg")
-    .attr("width", width)
-    .attr("height", height),
-    margin = {top: 20, right: 60, bottom: 60, left: 20},
-    width = width- margin.left - margin.right,
-    height = height - margin.top - margin.bottom;
-
-
-  var g = svg.append("g")
-    .attr("class", "points")
-    .attr("transform", "translate(" +  margin.left + " ," + margin.top + ")");
-
-  g.append("g")
-    .attr("class", "axis--x")
-    .attr("transform", "translate(0," + height + ")")
-      .append("text")
-      .attr("class", "axis_legend")
-      .text("Nota")
-      .attr("transform", "translate(0, " + (margin.bottom - 20 ) + ") ");
-  
-  g.append("g")
-    .attr("class", "axis--y")
-    .attr("transform", "translate(" + width + ",0)")
-      .append("text")
-      .attr("class", "axis_legend")
-      .text("Porcentage")
-      .attr("transform", "translate(0, 0) rotate(-90)");
+var height = 1200;
 
 
 
-  var x = d3.scaleLinear().range([0, width]);
-  var ySubGraphs = d3.scaleLinear().range([0, height]);
+// height = height - 150;
+
+var svg = d3.select("#chart")
+  .append("svg")
+  .attr("width", width)
+  .attr("height", height),
+  margin = {top: 20, right: 120, bottom: 60, left: 20},
+  width = width- margin.left - margin.right,
+  height = height - margin.top - margin.bottom,
+  fmt = d3.format(".1%");
 
 
-  var stack = d3.stack();
+var g = svg.append("g")
+  .attr("class", "points")
+  .attr("transform", "translate(" +  margin.left + " ," + margin.top + ")");
 
-  function drawGradesChart(sel, data, gradeFn, graphHeight) {
-    var mean = 0;
-    data.forEach(function (d, i) {
-      mean += gradeFn(d, i) / data.length;
-    });
+var gSubGraphs = g.append("g")
+  .attr("class", "subGraphs");
+g.append("g")
+  .attr("class", "axis--x")
+  .attr("transform", "translate(0," + height + ")")
+    .append("text")
+    .attr("class", "axis_legend")
+    .text("Puntos por pregunta")
+    .attr("transform", "translate(0, " + (margin.bottom - 20 ) + ") ");
 
-    var yRange = [10, graphHeight-10];
-
-    var y = function (d) {
-      return yRange[0] + Math.random()*(yRange[1]-yRange[0]);
-    };
-    updateGradesChart(data);
-
-
-      // UPDATE
-    function updateGradesChart(data) {
-      
-      var meanSel = sel
-        .selectAll(".mean")
-        .data([mean]);
-
-      var meanEnter = meanSel.enter()
-        .append("line")
-        .attr("class", "mean");
-
-      meanSel.merge(meanEnter)
-        .attr("x1", function (d) { return x(d);})
-        .attr("x2", function (d) { return x(d);})
-        .attr("y1", yRange[0])
-        .attr("y2", yRange[1]);
-
-      meanSel.exit().remove();
-
-      var points = sel.selectAll("circle")
-       .data(data, function (d) { return d.code; });
-
-      var pointsEnter = points.enter()
-        .append("circle")
-        .attr("cx", 0)
-        .attr("r", 5);
-
-      points.merge(pointsEnter)
-        .attr("id", function (d) { return "circle" + d.code; })
-        .transition()
-        .duration(1000)
-        .attr("cx", function (d,i) { return x(gradeFn(d, i)); })
-        .attr("cy", function (d,i) { return y(gradeFn(d, i)); });
-
-      points.exit()
-        .remove();
+g.append("g")
+  .attr("class", "axis--y")
+  .attr("transform", "translate(" + width + ",0)")
+    // .append("text")
+    // .attr("class", "axis_legend")
+    // .text("Porcentage")
+    // .attr("transform", "translate(0, 0) rotate(-90)");
 
 
-      //mean
-    }
+
+
+var x = d3.scaleLinear().range([0, width]);
+var ySubGraphs = d3.scaleLinear().range([0, height]);
+
+
+var stack = d3.stack();
+
+function drawGradesChart(sel, data, gradeFn, graphHeight) {
+  var mean = 0;
+  data.forEach(function (d, i) {
+    mean += gradeFn(d, i) / data.length;
+  });
+
+  var yRange = [10, graphHeight-10];
+
+  var y = function () {
+    return yRange[0] + Math.random()*(yRange[1]-yRange[0]);
+  };
+  updateGradesChart(data);
+
+
+    // UPDATE
+  function updateGradesChart(data) {
+
+    var meanSel = sel
+      .selectAll(".mean")
+      .data([mean]);
+
+    var meanEnter = meanSel.enter()
+      .append("line")
+      .attr("class", "mean");
+
+    meanSel.merge(meanEnter)
+      .attr("x1", function (d) { return x(d);})
+      .attr("x2", function (d) { return x(d);})
+      .attr("y1", yRange[0])
+      .attr("y2", yRange[1]);
+
+    meanSel.exit().remove();
+
+    var points = sel.selectAll("circle")
+     .data(data, function (d) { return d["Código"]; });
+
+    var pointsEnter = points.enter()
+      .append("circle")
+      .attr("cx", 0)
+      .attr("r", 5);
+
+    points.merge(pointsEnter)
+      .attr("id", function (d) { return "circle" + d["Código"]; })
+      .transition()
+      .duration(1000)
+      .attr("cx", function (d,i) { return x(gradeFn(d, i)); })
+      .attr("cy", function (d,i) { return y(gradeFn(d, i)); });
+
+    points.exit()
+      .remove();
+
+
+    //mean
+  }
+}
+
+
+
+function ready(err, data) {
+  if (err) throw err;
+
+  // Extract the %s expected on the first column
+  var pcts =  {};
+
+  var pointsColumns = data.columns
+    .filter(function (col) { return ["Código", "Nota"].indexOf(col)===-1; });
+
+  // Search for %s in the second row, if none 100, if some 75
+  var pointsWeightWithoutPcts = pointsColumns
+    .map(function (col) { return data[0][col]; })
+    .filter(function (val) { return val.indexOf("%") === -1; });
+
+  var PCT_OF_NON_NUMERIC = 100;
+  var sumNonPct = .01;
+  if (pointsWeightWithoutPcts.length !== data.columns.length-2) {
+    // Sums up all the points not related to a percentage
+    sumNonPct = pointsWeightWithoutPcts.reduce(function (p, val) {
+      return p + (+val);
+    }, 0);
+    PCT_OF_NON_NUMERIC = 70;
   }
 
- 
+  pointsColumns.forEach(function (col) {
+    var val = data[0][col];
 
-  function ready(err, data, pcts) {
-    if (err) throw err;
+    return pcts[""+col] = val.indexOf("%") === -1 ?
+      +val / sumNonPct * PCT_OF_NON_NUMERIC:
+      +val.slice(0,data[0][col].length-1);
+  });
 
-    // Preprocessing
-    d3.keys(pcts[0]).forEach(function (point) {
-      pcts[0][point] = +pcts[0][point];
-    });
-    data.forEach(function (student) {
-      d3.keys(pcts[0]).forEach(
-        function (point) {
-          student[point] = +student[point];
-        }
-      )      
-    });
-
-    stack.keys(d3.keys(pcts[0]));
-
-    //compute the domain of the subgraphs, usually 100%
-    ySubGraphs.domain([0, d3.sum(d3.values(pcts[0]))]);
-
-    x.domain([0, 10]);
-
-    var subGraphs = g.selectAll(".subGraph")
-      .data(stack(pcts));
-
-    var subGraphHeight = function (d) { 
-        return ySubGraphs(d[0][1])-ySubGraphs(d[0][0]); };
-    var subGraphsEnter = subGraphs.enter()    
-      .append("g")
-      .attr("class", "subGraph")
-      .attr("transform", function (d) {
-        return "translate(" + 0 + "," + ySubGraphs(d[0][0]) + ")";
-      });
-
-    subGraphsEnter
-      .append("rect")
-      .attr("x", 0)
-      .attr("y", 0)
-      .attr("width", width)
-      .attr("height", subGraphHeight )
-
-    subGraphsEnter
-      .each(function (point) {
-        drawGradesChart(d3.select(this), data, 
-          function (d) { return d[point.key]; },
-          subGraphHeight(point));
-      });
-
-    d3.select(".axis--x")
-      .call(d3.axisBottom(x)
-        .tickSizeInner(-height)
-        // .tickSizeOuter(10)
-        .tickPadding(15)
-      );
-
-    d3.select(".axis--y")
-      .call(d3.axisRight(ySubGraphs)
-        // .tickSizeInner(-height)
-        // .tickSizeOuter(10)
-        .tickPadding(15)
-      );
-
-
-
-    d3.select("#btnSearch")
-      .on("click", onSearch);
-
-    d3.select("#inputCode")
-      .on("change", onSearch);
-
-    d3.select("#btnShuffle")
-      .on("click", function () { update(data); })
-
-
-
-
-    function selectGrades(d) {
-      d3.selectAll("circle")
-        .transition()
-        .duration(500)
-        .attr("r", 5)
-        .style("opacity", 0.7)
-        .style("fill", "steelblue");
-      d3.selectAll(".tooltip").remove();
-
-
-      d3.selectAll("#circle"+d.code)
-        .transition()
-        .duration(2000)
-        .attr("r", 10)
-        .style("opacity", 1.0)
-        .style("fill", "darkred");
-
-      //tooltip
-      var text = "Nota: " + d.grade +  " código: " + d.code + "\n";
-      g
-        .append("text")
-        .attr("class", "tooltip")
-        .attr("x",  x(d.grade))
-        .attr("y",  0)
-        .text(text);
-
-      d3.select("#res")
-        .text(text);
-    }
-
-    function onSearch(evt) {
-      var code = d3.select("#inputCode").property("value").trim();
-
-      var res =data.filter(function (d) { return d.code===code; });
-
-      if (res.length<1) {
-        alert("Código no encontrado, intenta de nuevo!");
-        return;
+  // Remove the pcts now that we have them
+  data.splice(0,1);
+  // Convert grades to numbers
+  data.forEach(function (student) {
+    data.columns.forEach(
+      function (point) {
+        student[point] = +student[point];
       }
+    );
+  });
 
-      selectGrades(res[0]);
-    }
+  stack.keys(d3.keys(pcts));
 
-    
 
-    
+
+  // Draw the grade chart
+  d3.select("#grade")
+    .datum(data)
+    .call(randomGradesChart()
+      .x(function (d) { return d.Nota; })
+      .width(width + margin.left)
+      .height(100)
+      .xScale(d3.scaleLinear().domain([0, 5.5])));
+
+
+  //compute the domain of the subgraphs, usually 100%
+  ySubGraphs.domain([0, d3.sum(d3.values(pcts))]);
+
+  var isNota30pct = d3.select("#selProj").property("value") === "grades_webdev_201801_30pct.csv";
+  x.domain([
+    isNota30pct ? -5 : -.5,
+    isNota30pct ? 5.5 : 10.5
+  ]);
+
+  var subGraphs = gSubGraphs.selectAll(".subGraph")
+    .data(stack([pcts]));
+
+  var subGraphHeight = function (d) {
+    return ySubGraphs(d[0][1])-ySubGraphs(d[0][0]);
   };
 
+  var subGraphsEnter = subGraphs.enter()
+    .append("g")
+    .attr("class", "subGraph")
+    .attr("transform", function (d) {
+      return "translate(" + 0 + "," + ySubGraphs(d[0][0]) + ")";
+    });
 
-  var queue = d3.queue()
-    .defer(d3.csv, "grades.csv")
-    .defer(d3.csv, "pcts.csv")
+  subGraphsEnter
+    .append("rect")
+    .attr("x", 0)
+    .attr("y", 0)
+    .attr("width", width)
+    .attr("height", subGraphHeight );
+
+  subGraphsEnter
+    .append("text")
+    .attr("class", "pointLegend")
+    .attr("dx", width +20 )
+    .attr("dy", function (point) { return subGraphHeight(point)/2; })
+    .text(function (point) {
+      return (fmt(pcts[point.key]/100) + " " + point.key);
+    });
+
+  subGraphsEnter
+    .each(function (point) {
+      drawGradesChart(d3.select(this), data,
+        function (d) { return d[point.key]; },
+        subGraphHeight(point));
+    });
+
+  d3.select(".axis--x")
+    .call(d3.axisBottom(x)
+      .tickSizeInner(-height)
+      // .tickSizeOuter(10)
+      .tickPadding(15)
+    );
+
+  // d3.select(".axis--y")
+  //   .call(d3.axisRight(ySubGraphs)
+  //     // .tickSizeInner(-height)
+  //     // .tickSizeOuter(10)
+  //     .tickPadding(15)
+  //   );
+
+
+  d3.select("#btnSearch")
+    .on("click", onSearch);
+
+  d3.select("#inputCode")
+    .on("change", onSearch);
+
+  d3.select("#btnShuffle")
+    .on("click", function () { updateGradesChart(data); })
+
+
+
+
+  function selectGrades(d) {
+    d3.selectAll("circle")
+      .transition()
+      .duration(500)
+      .attr("r", 5)
+      .style("opacity", 0.7)
+      .style("fill", "#888");
+    d3.selectAll(".tooltip").remove();
+
+
+    d3.selectAll("#circle"+d["Código"])
+      .transition()
+      .duration(2000)
+      .attr("r", 10)
+      .style("opacity", 1.0)
+      .style("fill", "steelblue");
+
+    //tooltip
+    var text = "Nota: " + d.Nota +  " código: " + d["Código"] + "\n";
+    // g
+    //   .append("text")
+    //   .attr("class", "tooltip")
+    //   .attr("x",  x(d.Nota))
+    //   .attr("y",  0)
+    //   .text(text);
+
+    d3.select("#res")
+      .text(text);
+  }
+
+  function onSearch(evt) {
+    var code = +d3.select("#inputCode").property("value").trim();
+
+    var res =data.filter(function (d) { return d["Código"]===code; });
+
+    if (res.length<1) {
+      alert("Código no encontrado, intenta de nuevo!");
+      return;
+    }
+
+    selectGrades(res[0]);
+  }
+
+
+
+
+}
+
+function redraw() {
+  d3.queue()
+    .defer(d3.csv, d3.select("#selProj").property("value"))
     .await(ready);
+}
+
+redraw();
+d3.select("#selProj")
+  .on("change", redraw);
 
 
   </script>
